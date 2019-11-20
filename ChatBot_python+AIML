@@ -1,0 +1,79 @@
+from nltk import sent_tokenize, word_tokenize, pos_tag
+#this library is natural language tool kit
+from py2neo import Graph, Node, Relationship, NodeMatcher
+# this library will help you to use the python build-in function
+
+# on other hand you can also use CYPHER Language
+
+import sys
+import socket
+# this library will use here to get the ip address of the user
+
+import aiml
+
+# this file to get the aiml templates on the bases of given pattern
+
+kernel = aiml.Kernel()
+kernel.learn("chatbot.aiml");
+
+
+# chatbot aiml file where you can define any kind of pattern and their respective answers
+
+class chatbot:
+    def __init__(self):
+        self.text = ''
+        self.graph = Graph("bolt://localhost:7687", auth=("neo4j",
+                                                          "Password"))  # bolt port will help you to connect with NEO4J and you have to provie the password which you have diven to your repository/Graph/DB
+        self.graph.begin()
+        self.matcher = NodeMatcher(self.graph)  # this is node matcher which will match the nodes
+
+    def createUser(self):
+        name = input('please enter your name')
+        email = input('please enter your email')
+        password = input('please enter your password')
+
+        hostname = socket.gethostname()
+        IPAddr = socket.gethostbyname(hostname)
+        node = Node('user', name=name, email=email, password=password, IP=IPAddr)  # creating the node of the user
+        self.graph.create(node)
+        print('now please login yourself')
+        self.UserLogin()
+
+    def UserLogin(self):
+        email = input('please enter your email')
+        password = input('please enter your password')
+        node = Node('user', email=email, password=password)
+
+        matcher = NodeMatcher(self.graph)
+        user = matcher.match("user", email=email, password=password).first()
+
+        if user:
+            userAvailable = 'User Found'
+            chatbot = kernel.respond(userAvailable)
+            print(chatbot)
+            userName = self.graph("MATCH(a:user) WHERE a.email = {email}  RETURN  a.IP", email=email)
+
+            Ipaddress = userName.IP
+            Matching_IP_User_Name =self.graph.run("MATCH(a:user) WHERE a.IP = {IP} and a.email != {email}   RETURN a.name", IP= Ipaddress,email = email)
+            if  Matching_IP_User_Name:
+                relation = 'Relation'
+            chatbot = kernel.respond(relation)
+            rel = input(chatbot + Matching_IP_User_Name)
+
+            sentences = sent_tokenize(rel)
+            for sentence in sentences:
+                sentence = word_tokenize(sentence)
+                tag = pos_tag( sentence)  # you have to tokenize with your own way because here is 'He is my Collegue' collegue in NN
+            i = 0
+            for t in tag:
+                if t[i][1] == 'NN':
+                 rel = t[i][0]
+                 break
+                ++i
+
+            relation = Relationship(user, rel, Matching_IP_User_Name)  # it will create the relationship between the both user
+            self.graph.create(relation)
+
+        else:
+            print('you entered wrong credential sorry');
+            self.UserLogin()
