@@ -1,0 +1,19 @@
+<aiml version="1.0.1" encoding="UTF-8">
+<!-- chatbot.aiml -->
+
+    <category>
+        <pattern>Relation</pattern>
+        <template>
+            What is your relation with
+        </template>
+    </category>
+
+    <category>
+        <pattern>User Found</pattern>
+        <template>
+            Welcome
+        </template>
+    </category>
+
+
+</aiml>
